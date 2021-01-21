@@ -2,7 +2,7 @@
 A simple chess game with JavaScript and Phaser 3
 
 ## How to run the game?
-Use a Web Server to upload the server (I used XAMPP to simulate an Apache Server)
+Use a Web Server to upload the project (I used XAMPP to simulate an Apache Server)
 ### XAMPP example:
 - Download and install XAMPP on the official website.
 - In the XAMPP directory, coloque a pasta do projeto em <strong>./htdocs/</strong>
