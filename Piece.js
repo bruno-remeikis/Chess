@@ -1,16 +1,26 @@
 class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
 {
+    /*
+        PONTUAÇÃO
+        - Torre: 5
+        - Bispo: 3
+        - Rainha/dama: 9
+        - Cavalo: 3
+        - Rei: 
+        - Peão: 1
+    */
+
     // Static
     static TIPO_RAINHA = 0;
     static TIPO_REI = 1;
-    static TIPO_BISPO = 2;
+    static TIPO_BISPO = 4;
     static TIPO_CAVALO = 3;
-    static TIPO_TORRE = 4;
+    static TIPO_TORRE = 2;
     static TIPO_PEAO = 5;
 
     static NAME = 'pieces';
 
-    static SCALE = 0.4;
+    static SCALE = 1; //0.4;
 
     // Pré-load
     static preload(scene)
@@ -51,14 +61,19 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
         this.markations = [];
 
         this.moveTo(i, j);
+        this.walked = false;
+        this.longMoviment = false; // <- true: se o peão andar 2 casas
     }
 
     moveTo(i, j)
     {
         this.i = i;
         this.j = j;
-        this.x = Handler.HOUSE_SIZE * i + Handler.HOUSE_SIZE / 2;
-        this.y = Handler.HOUSE_SIZE * j + Handler.HOUSE_SIZE / 2;
+        this.x = Handler.X_OFFSET + Handler.HOUSE_SIZE * i + Handler.HOUSE_SIZE / 2;
+        this.y = Handler.Y_OFFSET + Handler.HOUSE_SIZE * j + Handler.HOUSE_SIZE / 2;
+
+        this.walked = true;
+        this.longMoviment = false;
     }
 
     getValidHouses(board)
@@ -109,7 +124,11 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
                 if(board[i][j] === null)
                     validHouses.push({ i, j });
                 else
+                {
+                    if(board[i][j].player !== self.player)
+                        validHouses.push({ i, j, captureable: true });
                     break;
+                }
             }
             // Cima-direita
             for(var d = 1; ; d++)
@@ -124,7 +143,11 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
                 if(board[i][j] === null)
                     validHouses.push({ i, j });
                 else
+                {
+                    if(board[i][j].player !== self.player)
+                        validHouses.push({ i, j, captureable: true });
                     break;
+                }
             }
             // Baixo-esquerda
             for(var d = 1; ; d++)
@@ -139,7 +162,11 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
                 if(board[i][j] === null)
                     validHouses.push({ i, j });
                 else
+                {
+                    if(board[i][j].player !== self.player)
+                        validHouses.push({ i, j, captureable: true });
                     break;
+                }
             }
             // Baixo-direita
             for(var d = 1; ; d++)
@@ -154,7 +181,11 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
                 if(board[i][j] === null)
                     validHouses.push({ i, j });
                 else
+                {
+                    if(board[i][j].player !== self.player)
+                        validHouses.push({ i, j, captureable: true });
                     break;
+                }
             }
         }
 
@@ -162,11 +193,69 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
         {
             // PEÃO
             case Piece.TIPO_PEAO:
-                // ---------- REMOVER ----------
                 const direcao = this.player === Handler.PLAYER_BLACK ? 1 : -1;
-                if(board[this.i][this.j + direcao] === null)
-                    validHouses.push({ i: this.i, j: this.j + direcao });
-                // ---------- REMOVER ----------
+
+                var j = this.j + direcao;
+
+                if(j >= 0 && j < Handler.DIMENSION)
+                {
+                    // Movimento padrão (1 casa)
+                    if(board[this.i][j] === null)
+                        validHouses.push({
+                            i: this.i,
+                            j
+                        });
+
+                    for(var dI = -1; dI <= 1; dI++)
+                    {
+                        const i = this.i + dI;
+
+                        // Movimento padrão (1 casa)
+                        if(dI === 0)
+                        {
+                            if(board[i][j] === null)
+                                validHouses.push({ i, j });
+                        }
+                        else
+                        {
+                            if(i >= 0 && i < Handler.DIMENSION)
+                            {
+                                // Captura
+                                if(board[i][j] !== null
+                                && board[i][j].player !== this.player)
+                                    validHouses.push({
+                                        i, j,
+                                        captureable: true
+                                    });
+
+                                // En passant
+                                if(board[i][this.j] !== null                 // Se casa ao lado não estiver vazia
+                                && board[i][this.j].player !== this.player   // E a peça ao lado for do adversário
+                                && board[i][this.j].tipo === Piece.TIPO_PEAO // E a peça ao lado for um peão
+                                && board[i][j] === null)                     // E a casa atrás deste peão estiver vazia:
+                                    validHouses.push({
+                                        i, j,
+                                        enPassant: {
+                                            i,
+                                            j: this.j
+                                        }
+                                    });
+                            }
+                        }
+                    }
+
+                    // Movimento inicial (2 casas)
+                    if(!this.walked
+                        && j + direcao >= 0
+                        && j + direcao < Handler.DIMENSION
+                        && board[this.i][j + direcao] === null)
+                            validHouses.push({
+                                i: this.i,
+                                j: j + direcao,
+                                longMoviment: true
+                            });
+                }
+
                 break;
 
             // TORRE
@@ -176,6 +265,39 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
 
             // CAVALO
             case Piece.TIPO_CAVALO:
+                // Buscar em forma de L por todas as direções
+                for(var dI = -2; dI <= 2; dI++)
+                {
+                    const i = this.i + dI;
+
+                    if(i < 0
+                    || i >= Handler.DIMENSION
+                    || dI === 0)
+                        continue;
+
+                    for(var dJ = -2; dJ <= 2; dJ++)
+                    {
+                        const j = this.j + dJ;
+
+                        if(j < 0
+                        || j >= Handler.DIMENSION
+                        || dJ === 0)
+                            continue;
+
+                        // Se (dI for -1 ou 1) xou (dJ for -1 ou 1):
+                        if(((dI === -1 || dI === 1)
+                        ||  (dJ === -1 || dJ === 1))
+                        && ((dI !== -1 && dI !== 1)
+                        ||  (dJ !== -1 && dJ !== 1)))
+                        {
+                            if(board[i][j] === null)
+                                validHouses.push({ i, j });
+                            else
+                                if(board[i][j].player !== this.player)
+                                    validHouses.push({ i, j, captureable: true });
+                        }
+                    }
+                }
                 break;
 
             // BISPO
@@ -191,12 +313,51 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
 
             // REI
             case Piece.TIPO_REI:
+                // Buscar ao redor da peça
                 for(var i = this.i - 1; i <= this.i + 1; i++)
-                    for(var j = this.j - 1; j <= this.j + 1; j++)
+                    for(j = this.j - 1; j <= this.j + 1; j++)
                         if(i >= 0 && i < Handler.DIMENSION
                         && j >= 0 && j < Handler.DIMENSION
                         && board[i][j] === null)
                             validHouses.push({ i, j });
+
+                // Roque
+                if(!this.walked)
+                {
+                    // Esquerda
+                    const leftTower = board[0][this.j];
+
+                    if(leftTower !== null
+                    && leftTower.tipo === Piece.TIPO_TORRE // Se for uma torre
+                    && leftTower.player === this.player    // E ela for do mesmo jogador
+                    && !leftTower.walked                   // E ela não tiver se movimentado ainda
+                    && board[this.i - 1][this.j] === null  // E as 2 casas à esquerda estiverem vazias
+                    && board[this.i - 2][this.j] === null)
+                    {
+                        validHouses.push({
+                            i: this.i - 2,
+                            j: this.j,
+                            roque: true
+                        });
+                    }
+
+                    // Direita
+                    const rightTower = board[Handler.DIMENSION - 1][this.j];
+
+                    if(rightTower !== null
+                    && rightTower.tipo === Piece.TIPO_TORRE // Se for uma torre
+                    && rightTower.player === this.player    // E ela for do mesmo jogador
+                    && !rightTower.walked                   // E ela não tiver se movimentado ainda
+                    && board[this.i + 1][this.j] === null   // E as 2 casas à direita estiverem vazias
+                    && board[this.i + 2][this.j] === null)
+                    {
+                        validHouses.push({
+                            i: this.i + 2,
+                            j: this.j,
+                            roque: true
+                        });
+                    }
+                }
                 break;
         }
 
@@ -206,51 +367,27 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
     // Desenhar caso selecionado
     drawSelected(board)
     {
-        const piece = this;
+        const self = this;
 
-        function drawInHouse(i, j)
+        function showHouse(i, j, color)
         {
-            const lineWidth = 3;
-
-            const markation = piece.scene.add.rectangle(
-                i * Handler.HOUSE_SIZE + Handler.HOUSE_SIZE / 2,
-                j * Handler.HOUSE_SIZE + Handler.HOUSE_SIZE / 2,
-                Handler.HOUSE_SIZE - lineWidth,
-                Handler.HOUSE_SIZE - lineWidth,
-                0x25b350,
-                0.14
-            )
-            .setStrokeStyle(lineWidth, /*0xe34242*/ 0x25b350);
-
-            piece.markations.push(markation);
-
-            /*
-            graphics.lineStyle(lineWidth, 0x42eff5);
-            const a = graphics.strokeRect(
-                i * Handler.HOUSE_SIZE + lineWidth / 2,
-                j * Handler.HOUSE_SIZE + lineWidth / 2,
-                Handler.HOUSE_SIZE - lineWidth,
-                Handler.HOUSE_SIZE - lineWidth
+            self.markations.push(
+                Handler.showHouse(self.scene, i, j, color)
             );
-
-            console.log(a);
-            a.visible = false;
-            */
         }
 
         // This
-        drawInHouse(this.i, this.j);
+        showHouse(this.i, this.j, Handler.COLORS.yellow);
         
         // Casas válidas
         for(var house of this.getValidHouses(board))
-            drawInHouse(house.i, house.j);
-
-        /*
-        console.log(this.markations);
-        for(var i = 0; i < this.markations.length; i++)
-            this.markations[i].destroy();
-        this.markations = [];
-        */
+            showHouse(
+                house.i,
+                house.j,
+                house.captureable || house.enPassant
+                    ? Handler.COLORS.green
+                    : Handler.COLORS.blue
+            );
     }
 
     removeMarkations()
