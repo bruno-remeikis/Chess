@@ -245,7 +245,95 @@ function create()
 
 
 
+    // -------------------- PROMOÇÃO DO PEÃO --------------------
+    const promoItens = [];
+    const promoImages = [];
+
+    const promoMargin = 10;
+    const promoScale = 1.3;
+
+    var pawnToPromote = null;
+
+    const promoRect = this.add.rectangle(
+        Handler.X_OFFSET + Handler.BOARD_SIZE / 2,
+        Handler.Y_OFFSET + Handler.BOARD_SIZE / 2,
+        Handler.HOUSE_SIZE * promoScale * 4 + promoMargin * 5,
+        Handler.HOUSE_SIZE * promoScale + promoMargin * 2,
+        0xcccccc
+    )
+    .setDepth(91)
+    .setStrokeStyle(1, 0x888888);
+
+    promoItens.push(promoRect);
+
+    const piecesPromoOrder = [Piece.TIPO_TORRE, Piece.TIPO_CAVALO, Piece.TIPO_BISPO, Piece.TIPO_RAINHA];
+
+    for(var i = 0; i < 4; i++)
+    {
+        const tipo = piecesPromoOrder[i];
+
+        const promoHouse = this.add.rectangle(
+            (promoRect.x - promoRect.width  / 2) + (promoMargin * (i + 1)) + (Handler.HOUSE_SIZE * promoScale) / 2 + (Handler.HOUSE_SIZE * promoScale) * i,
+            (promoRect.y - promoRect.height / 2) +  promoMargin            + (Handler.HOUSE_SIZE * promoScale) / 2,
+            Handler.HOUSE_SIZE * promoScale,
+            Handler.HOUSE_SIZE * promoScale,
+            0xdddddd
+        )
+        .setDepth(92)
+        .setInteractive()
+        .on('pointerdown', () =>
+        {
+            pawnToPromote.tipo = tipo;
+            pawnToPromote.setFrame(
+                Piece.getFrame(pawnToPromote.player, tipo)
+            );
+
+            hidePromo();
+        });
+
+        promoItens.push(promoHouse);
+
+        const promoPiece = this.add.image(
+            promoHouse.x,
+            promoHouse.y,
+            'pieces',
+            //Piece.getFrame(turn, tipo)
+        )
+        .setDepth(93);
+        console.log(promoPiece)
+        promoPiece.setScale(promoScale);
+
+        promoImages.push({ img: promoPiece, tipo });
+    }
+
+    // Funções
+
+    function showPromo()
+    {
+        promoItens .forEach(item => item.setVisible(true));
+        promoImages.forEach(item =>
+        {
+            item.img.setVisible(true);
+            item.img.setFrame(
+                Piece.getFrame(turn, item.tipo)
+            );
+        });
+    }
+
+    function hidePromo()
+    {
+        promoItens .forEach(item => item.setVisible(false));
+        promoImages.forEach(item => item.img.setVisible(false));
+    }
+
+    hidePromo();
+
+
+
     // -------------------- MECÂNICA --------------------
+    // Variáveis usadas para remover o Piece.enPassantAble
+    var enPassantTurn = null;
+    var enPassantPiece = null;
 
     // Ação do tabuleiro
     this.add.rectangle(
@@ -293,7 +381,7 @@ function create()
                             board[i][j].destroy();
                         }
 
-                        // En passant
+                        // En passant (execussão)
                         if(house.enPassant)
                         {
                             board[house.enPassant.i][house.enPassant.j].destroy();
@@ -337,7 +425,46 @@ function create()
 
                         // Peão move 2 casas
                         if(house.longMoviment)
+                        {
+                            // Movimento longo do peão
                             selectedPiece.longMoviment = true;
+
+                            // En passant (possibilidade)
+                            for(var dI = -1; dI <= 1; dI += 2)
+                            {
+                                const i = house.i + dI;
+
+                                if(i >= 0
+                                && i < Handler.DIMENSION
+                                && board[i][house.j] !== null
+                                && board[i][house.j].player !== turn
+                                && board[i][house.j].tipo === Piece.TIPO_PEAO)
+                                {
+                                    selectedPiece.enPassantAble = true;
+
+                                    enPassantTurn = turn;
+                                    enPassantPiece = selectedPiece;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Remover en passant
+                        if(enPassantPiece !== null
+                        && enPassantTurn !== turn)
+                        {
+                            enPassantPiece.enPassantAble = false;
+
+                            enPassantTurn = null;
+                            enPassantPiece = null;
+                        }
+
+                        // Promoção do peão
+                        if(house.promotion)
+                        {
+                            pawnToPromote = selectedPiece;
+                            showPromo();
+                        }
 
                         // Atualizar status
                         selectedPiece = null;

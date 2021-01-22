@@ -35,15 +35,20 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
         );
     }
 
+    static getFrame(player, tipo)
+    {
+        return tipo + 6 * player;
+    }
+
     // Construtor
     constructor(scene, player, tipo, i, j)
     {
         super(
-            scene,            // Scene
-            0,                // x
-            0,                // y
-            Piece.NAME,       // Nome da imagem
-            tipo + 6 * player // Index do sprite
+            scene,                       // Scene
+            0,                           // x
+            0,                           // y
+            Piece.NAME,                  // Nome da imagem
+            Piece.getFrame(player, tipo) // Frame do sprite
         );
 
         scene.add.existing(this);
@@ -62,7 +67,9 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
 
         this.moveTo(i, j);
         this.walked = false;
+        this.firstMovement = false;
         this.longMoviment = false; // <- true: se o peão andar 2 casas
+        this.enPassantAble = false;
     }
 
     moveTo(i, j)
@@ -72,6 +79,7 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
         this.x = Handler.X_OFFSET + Handler.HOUSE_SIZE * i + Handler.HOUSE_SIZE / 2;
         this.y = Handler.Y_OFFSET + Handler.HOUSE_SIZE * j + Handler.HOUSE_SIZE / 2;
 
+        this.firstMovement = !this.walked; // Será o primeiro movimento se ele ainda não tiver andado
         this.walked = true;
         this.longMoviment = false;
     }
@@ -199,12 +207,7 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
 
                 if(j >= 0 && j < Handler.DIMENSION)
                 {
-                    // Movimento padrão (1 casa)
-                    if(board[this.i][j] === null)
-                        validHouses.push({
-                            i: this.i,
-                            j
-                        });
+                    console.log('\n\n\n');
 
                     for(var dI = -1; dI <= 1; dI++)
                     {
@@ -214,7 +217,10 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
                         if(dI === 0)
                         {
                             if(board[i][j] === null)
-                                validHouses.push({ i, j });
+                                validHouses.push({
+                                    i, j,
+                                    promotion: j === 0 || j === Handler.DIMENSION - 1
+                                });
                         }
                         else
                         {
@@ -228,32 +234,43 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
                                         captureable: true
                                     });
 
-                                // En passant
+                                console.log(`| ${i} | ${this.j} |`);
+                                console.log(board[i][this.j] !== null);
+                                console.log(board[i][this.j]?.player !== this.player);
+                                console.log(board[i][this.j]?.tipo === Piece.TIPO_PEAO);
+                                console.log(board[i][this.j]?.enPassantAble);
+                                console.log(board[i][j] === null);
+
+                                // En passant (execução)
                                 if(board[i][this.j] !== null                 // Se casa ao lado não estiver vazia
                                 && board[i][this.j].player !== this.player   // E a peça ao lado for do adversário
                                 && board[i][this.j].tipo === Piece.TIPO_PEAO // E a peça ao lado for um peão
+                                && board[i][this.j].enPassantAble            // E a peça tiver acabado de se mover (ou seja, se en passant estiver habilitado)
                                 && board[i][j] === null)                     // E a casa atrás deste peão estiver vazia:
+                                {
+                                    console.log('en passant !');
+
                                     validHouses.push({
                                         i, j,
                                         enPassant: {
-                                            i,
-                                            j: this.j
+                                            i, j: this.j
                                         }
                                     });
+                                }
                             }
                         }
                     }
 
                     // Movimento inicial (2 casas)
                     if(!this.walked
-                        && j + direcao >= 0
-                        && j + direcao < Handler.DIMENSION
-                        && board[this.i][j + direcao] === null)
-                            validHouses.push({
-                                i: this.i,
-                                j: j + direcao,
-                                longMoviment: true
-                            });
+                    && j + direcao >= 0
+                    && j + direcao < Handler.DIMENSION
+                    && board[this.i][j + direcao] === null)
+                        validHouses.push({
+                            i: this.i,
+                            j: j + direcao,
+                            longMoviment: true
+                        });
                 }
 
                 break;

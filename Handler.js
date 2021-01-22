@@ -21,8 +21,8 @@ class Handler
     static PLAYER_BLACK = 0;
 
     // Deslocamento
-    static X_OFFSET = 0;
-    static Y_OFFSET = 0;
+    static X_OFFSET;
+    static Y_OFFSET;
 
     // Cores
     static COLORS = {
