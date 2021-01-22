@@ -96,25 +96,41 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
                 if(board[i][self.j] === null)
                     validHouses.push({ i, j: self.j });
                 else
+                {
+                    if(board[i][self.j].player !== self.player)
+                        validHouses.push({ i, j: self.j, captureable: true });
                     break;
+                }
             // Baixo
             for(var i = self.i + 1; i < Handler.DIMENSION; i++)
                 if(board[i][self.j] === null)
                     validHouses.push({ i, j: self.j });
                 else
+                {
+                    if(board[i][self.j].player !== self.player)
+                        validHouses.push({ i, j: self.j, captureable: true });
                     break;
+                }
             // Direita
             for(var j = self.j + 1; j < Handler.DIMENSION; j++)
                 if(board[self.i][j] === null)
                     validHouses.push({ i: self.i, j });
                 else
+                {
+                    if(board[self.i][j].player !== self.player)
+                        validHouses.push({ i:self.i, j, captureable: true });
                     break;
+                }
             // Esquerda
             for(var j = self.j - 1; j >= 0; j--)
                 if(board[self.i][j] === null)
                     validHouses.push({ i: self.i, j });
                 else
+                {
+                    if(board[self.i][j].player !== self.player)
+                        validHouses.push({ i:self.i, j, captureable: true });
                     break;
+                }
         }
 
         function getDiagonal()
@@ -231,15 +247,9 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
                                 && board[i][j].player !== this.player)
                                     validHouses.push({
                                         i, j,
-                                        captureable: true
+                                        captureable: true,
+                                        promotion: j === 0 || j === Handler.DIMENSION - 1
                                     });
-
-                                console.log(`| ${i} | ${this.j} |`);
-                                console.log(board[i][this.j] !== null);
-                                console.log(board[i][this.j]?.player !== this.player);
-                                console.log(board[i][this.j]?.tipo === Piece.TIPO_PEAO);
-                                console.log(board[i][this.j]?.enPassantAble);
-                                console.log(board[i][j] === null);
 
                                 // En passant (execução)
                                 if(board[i][this.j] !== null                 // Se casa ao lado não estiver vazia
@@ -334,9 +344,14 @@ class Piece extends /*Phaser.GameObjects.Image*/ Phaser.Physics.Arcade.Sprite
                 for(var i = this.i - 1; i <= this.i + 1; i++)
                     for(j = this.j - 1; j <= this.j + 1; j++)
                         if(i >= 0 && i < Handler.DIMENSION
-                        && j >= 0 && j < Handler.DIMENSION
-                        && board[i][j] === null)
-                            validHouses.push({ i, j });
+                        && j >= 0 && j < Handler.DIMENSION)
+                        {
+                            if(board[i][j] === null)
+                                validHouses.push({ i, j });
+                            else
+                                if(board[i][j].player !== this.player)
+                                    validHouses.push({ i, j, captureable: true });
+                        }
 
                 // Roque
                 if(!this.walked)

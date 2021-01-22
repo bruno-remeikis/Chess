@@ -223,8 +223,9 @@ function create()
     {
         for(var i = 0; i < Handler.DIMENSION; i++)
             for(var j = 0; j < Handler.DIMENSION; j++)
-                if(board[i][j] !== null
-                && board[i][j].player === turn)
+                if(board[i][j] !== null                          // Se existir peça naquela coordenada
+                && board[i][j].player === turn                   // E esta peça for do jogador da vez
+                && board[i][j].getValidHouses(board).length > 0) // E existirem jogadas possíveis para ela:
                     selectableHouses.push(
                         Handler.showHouse(self, i, j, Handler.COLORS.green)
                     );
@@ -353,8 +354,10 @@ function create()
         {
             const piece = board[i][j];
 
-            // Se a posição clicada for uma peça válida:
-            if(piece !== null && piece.player === turn)
+            // Se a posição clicada for uma peça válida e existirem jogadas possíveis:
+            if(piece !== null
+            && piece.player === turn
+            && piece.getValidHouses(board).length > 0)
             {
                 hideHouses();
 
