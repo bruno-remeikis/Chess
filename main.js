@@ -221,8 +221,6 @@ function create()
      */
     function showSelectableHouses()
     {
-        console.log(self);
-
         for(var i = 0; i < Handler.DIMENSION; i++)
             for(var j = 0; j < Handler.DIMENSION; j++)
                 if(board[i][j] !== null
@@ -299,6 +297,7 @@ function create()
                         if(house.enPassant)
                         {
                             board[house.enPassant.i][house.enPassant.j].destroy();
+                            board[house.enPassant.i][house.enPassant.j] = null;
                         }
 
                         // Atualizar tabuleiro
